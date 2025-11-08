@@ -24,3 +24,39 @@ for dir_path in [DATA_DIR, RAW_DATA_DIR, PROCESSED_DATA_DIR, MODEL_DIR,
 # Dataset URL
 DATASET_URL = "http://www.manythings.org/anki/fra-eng.zip"
 RAW_DATA_FILE = RAW_DATA_DIR / "fra.txt"
+
+# Preprocessing
+MAX_LENGTH = 20  # Maximum sentence length (in words)
+MIN_LENGTH = 3   # Minimum sentence length
+VOCAB_SIZE_EN = 10000  # English vocabulary size
+VOCAB_SIZE_FR = 10000  # French vocabulary size
+
+# Special tokens
+PAD_TOKEN = "<pad>"
+SOS_TOKEN = "<sos>"  # Start of sequence
+EOS_TOKEN = "<eos>"  # End of sequence
+UNK_TOKEN = "<unk>"  # Unknown token
+
+PAD_IDX = 0
+SOS_IDX = 1
+EOS_IDX = 2
+UNK_IDX = 3
+
+# Train/Val/Test split
+TRAIN_RATIO = 0.8
+VAL_RATIO = 0.1
+TEST_RATIO = 0.1
+
+# ============================================================================
+# MODEL HYPERPARAMETERS
+# ============================================================================
+
+# Common parameters for both models
+EMBEDDING_DIM = 256
+HIDDEN_DIM = 512
+ENCODER_LAYERS = 2
+DECODER_LAYERS = 2
+DROPOUT = 0.3
+
+# Attention-specific parameters
+ATTENTION_DIM = 512  # Dimension of attention mechanism
