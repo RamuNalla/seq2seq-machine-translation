@@ -60,3 +60,41 @@ DROPOUT = 0.3
 
 # Attention-specific parameters
 ATTENTION_DIM = 512  # Dimension of attention mechanism
+
+# ============================================================================
+# TRAINING CONFIGURATION
+# ============================================================================
+
+# Training parameters
+BATCH_SIZE = 64
+LEARNING_RATE = 0.001
+NUM_EPOCHS = 20
+GRADIENT_CLIP = 1.0  # Gradient clipping threshold
+TEACHER_FORCING_RATIO = 0.5  # Probability of using teacher forcing
+
+# Optimizer
+OPTIMIZER = "adam"  # Options: 'adam', 'sgd', 'rmsprop'
+WEIGHT_DECAY = 1e-5
+
+# Learning rate scheduler
+USE_LR_SCHEDULER = True
+LR_SCHEDULER_PATIENCE = 3
+LR_SCHEDULER_FACTOR = 0.5
+
+# Early stopping
+EARLY_STOPPING_PATIENCE = 5
+
+
+# ============================================================================
+# DEVICE CONFIGURATION
+# ============================================================================
+import torch
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+NUM_WORKERS = 4  # For data loading
+
+# ============================================================================
+# LOGGING & CHECKPOINTING
+# ============================================================================
+LOG_INTERVAL = 100  # Log every N batches
+SAVE_INTERVAL = 1   # Save checkpoint every N epochs
+VISUALIZE_ATTENTION_INTERVAL = 5  # Visualize attention every N epochs
