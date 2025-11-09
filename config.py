@@ -21,8 +21,8 @@ for dir_path in [DATA_DIR, RAW_DATA_DIR, PROCESSED_DATA_DIR, MODEL_DIR,
 # ============================================================================
 # DATA CONFIGURATION
 # ============================================================================
-# Dataset URL
-DATASET_URL = "http://www.manythings.org/anki/fra-eng.zip"
+# Dataset URL (use HTTPS to avoid server rejecting non-secure requests)
+DATASET_URL = "https://www.manythings.org/anki/fra-eng.zip"
 RAW_DATA_FILE = RAW_DATA_DIR / "fra.txt"
 
 # Preprocessing

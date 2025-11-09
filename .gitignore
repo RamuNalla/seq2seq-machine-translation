@@ -1,0 +1,63 @@
+# .gitignore for seq2seq_machine_translation
+# Prevent committing large files (datasets, model checkpoints, cached files)
+
+# macOS
+.DS_Store
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv/
+venv/
+env/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# Data and archives
+data/
+data/raw/
+data/processed/
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Models / checkpoints
+saved_models/
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+*.h5
+*.model
+
+# Logs / caches
+logs/
+*.log
+.cache/
+tmp/
+
+# Backups
+*.bak
+*.orig
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Database files
+*.sqlite3
+*.db
+
+# Misc
+__MACOSX/
+*.egg-info/
+dist/
+build/
