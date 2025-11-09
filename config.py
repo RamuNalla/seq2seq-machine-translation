@@ -98,3 +98,11 @@ NUM_WORKERS = 4  # For data loading
 LOG_INTERVAL = 100  # Log every N batches
 SAVE_INTERVAL = 1   # Save checkpoint every N epochs
 VISUALIZE_ATTENTION_INTERVAL = 5  # Visualize attention every N epochs
+
+
+# ============================================================================
+# EVALUATION CONFIGURATION
+# ============================================================================
+BEAM_SIZE = 5  # Beam search width
+MAX_DECODE_LENGTH = 50  # Maximum length for generated translations
+BLEU_METRICS = ['bleu1', 'bleu2', 'bleu3', 'bleu4']
