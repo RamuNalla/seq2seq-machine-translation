@@ -107,3 +107,29 @@ class Tokenizer:
         print(f"✓ Vocabulary built: {len(self.word2idx)} words")
         print(f"  Most common words: {most_common[:10]}")
     
+
+    def encode(self, text: str, add_sos: bool = False, add_eos: bool = False) -> List[int]:     # Encode text to indices
+        """
+        Args:
+            text: Input text
+            add_sos: Whether to add SOS token
+            add_eos: Whether to add EOS token
+            
+        Returns:
+            List of indices
+        """
+        tokens = self.tokenize(text)
+        
+        # Convert tokens to indices
+        indices = []
+        if add_sos:
+            indices.append(config.SOS_IDX)
+        
+        for token in tokens:
+            idx = self.word2idx.get(token, config.UNK_IDX)
+            indices.append(idx)
+        
+        if add_eos:
+            indices.append(config.EOS_IDX)
+        
+        return indices
