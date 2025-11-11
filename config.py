@@ -106,3 +106,111 @@ VISUALIZE_ATTENTION_INTERVAL = 5  # Visualize attention every N epochs
 BEAM_SIZE = 5  # Beam search width
 MAX_DECODE_LENGTH = 50  # Maximum length for generated translations
 BLEU_METRICS = ['bleu1', 'bleu2', 'bleu3', 'bleu4']
+
+# ============================================================================
+# API CONFIGURATION
+# ============================================================================
+API_HOST = "0.0.0.0"
+API_PORT = 8000
+API_WORKERS = 1
+
+# Model paths for API
+BASELINE_MODEL_PATH = MODEL_DIR / "baseline_lstm.pth"
+ATTENTION_MODEL_PATH = MODEL_DIR / "attention_lstm.pth"
+TOKENIZER_EN_PATH = PROCESSED_DATA_DIR / "tokenizer_en.pkl"
+TOKENIZER_FR_PATH = PROCESSED_DATA_DIR / "tokenizer_fr.pkl"
+
+# ============================================================================
+# STREAMLIT CONFIGURATION
+# ============================================================================
+STREAMLIT_PORT = 8501
+API_ENDPOINT = f"http://localhost:{API_PORT}"
+
+# ============================================================================
+# MODEL-SPECIFIC CONFIGURATIONS
+# ============================================================================
+
+class BaselineConfig:
+    """Configuration for baseline LSTM encoder-decoder"""
+    name = "baseline_lstm"
+    embedding_dim = EMBEDDING_DIM
+    hidden_dim = HIDDEN_DIM
+    encoder_layers = ENCODER_LAYERS
+    decoder_layers = DECODER_LAYERS
+    dropout = DROPOUT
+    
+    # Model-specific parameters
+    use_bidirectional = False  # Unidirectional LSTM
+    
+    def __repr__(self):
+        return f"BaselineConfig(hidden={self.hidden_dim}, layers={self.encoder_layers})"
+    
+class AttentionConfig:
+    """Configuration for LSTM with Bahdanau attention"""
+    name = "attention_lstm"
+    embedding_dim = EMBEDDING_DIM
+    hidden_dim = HIDDEN_DIM
+    encoder_layers = ENCODER_LAYERS
+    decoder_layers = DECODER_LAYERS
+    dropout = DROPOUT
+    attention_dim = ATTENTION_DIM
+    
+    # Model-specific parameters
+    use_bidirectional = True  # Bidirectional encoder for better context
+    attention_type = "bahdanau"  # Options: 'bahdanau', 'luong'
+    
+    def __repr__(self):
+        return f"AttentionConfig(hidden={self.hidden_dim}, attention={self.attention_dim})"
+    
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def get_model_config(model_type: str):
+    """Get configuration for specified model type"""
+    if model_type.lower() == "baseline":
+        return BaselineConfig()
+    elif model_type.lower() == "attention":
+        return AttentionConfig()
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
+    
+def print_config():
+    """Print all configuration parameters"""
+    print("=" * 80)
+    print("NEURAL MACHINE TRANSLATION - CONFIGURATION")
+    print("=" * 80)
+    print(f"\n📁 PATHS:")
+    print(f"  Root Dir: {ROOT_DIR}")
+    print(f"  Data Dir: {DATA_DIR}")
+    print(f"  Model Dir: {MODEL_DIR}")
+    
+    print(f"\n📊 DATA:")
+    print(f"  Max Length: {MAX_LENGTH}")
+    print(f"  Vocab Size (EN): {VOCAB_SIZE_EN}")
+    print(f"  Vocab Size (FR): {VOCAB_SIZE_FR}")
+    print(f"  Train/Val/Test: {TRAIN_RATIO}/{VAL_RATIO}/{TEST_RATIO}")
+    
+    print(f"\n🏗️ MODEL:")
+    print(f"  Embedding Dim: {EMBEDDING_DIM}")
+    print(f"  Hidden Dim: {HIDDEN_DIM}")
+    print(f"  Encoder Layers: {ENCODER_LAYERS}")
+    print(f"  Decoder Layers: {DECODER_LAYERS}")
+    print(f"  Dropout: {DROPOUT}")
+    
+    print(f"\n🎯 TRAINING:")
+    print(f"  Batch Size: {BATCH_SIZE}")
+    print(f"  Learning Rate: {LEARNING_RATE}")
+    print(f"  Epochs: {NUM_EPOCHS}")
+    print(f"  Device: {DEVICE}")
+    print(f"  Teacher Forcing Ratio: {TEACHER_FORCING_RATIO}")
+    
+    print(f"\n🔧 API:")
+    print(f"  Host: {API_HOST}:{API_PORT}")
+    print(f"  Streamlit Port: {STREAMLIT_PORT}")
+    
+    print("=" * 80)
+
+
+if __name__ == "__main__":
+    print_config()
