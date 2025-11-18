@@ -133,3 +133,81 @@ class Tokenizer:
             indices.append(config.EOS_IDX)
         
         return indices
+
+    def decode(self, indices: List[int], remove_special: bool = True) -> str:
+        """
+        Decode indices to text
+        
+        Args:
+            indices: List of indices
+            remove_special: Whether to remove special tokens
+            
+        Returns:
+            Decoded text
+        """
+        tokens = []
+        for idx in indices:
+            # Stop at EOS token
+            if idx == config.EOS_IDX and remove_special:
+                break
+            
+            token = self.idx2word.get(idx, self.unk_token)
+            
+            # Skip special tokens if requested
+            if remove_special and token in [self.pad_token, self.sos_token, self.eos_token]:
+                continue
+            
+            tokens.append(token)
+        
+        text = ' '.join(tokens)
+        return text
+    
+    def batch_encode(self, texts: List[str], add_sos: bool = False, 
+                    add_eos: bool = False) -> List[List[int]]:
+        """
+        Encode a batch of texts
+        
+        Args:
+            texts: List of texts
+            add_sos: Whether to add SOS token
+            add_eos: Whether to add EOS token
+            
+        Returns:
+            List of encoded sequences
+        """
+        return [self.encode(text, add_sos, add_eos) for text in texts]
+    
+    def batch_decode(self, batch_indices: List[List[int]], 
+                    remove_special: bool = True) -> List[str]:
+        """
+        Decode a batch of indices
+        
+        Args:
+            batch_indices: List of index sequences
+            remove_special: Whether to remove special tokens
+            
+        Returns:
+            List of decoded texts
+        """
+        return [self.decode(indices, remove_special) for indices in batch_indices]
+    
+    def save(self, path: str):
+        """Save tokenizer to file"""
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
+        print(f"✓ Tokenizer saved to {path}")
+
+    @staticmethod
+    def load(path: str) -> 'Tokenizer':
+        """Load tokenizer from file"""
+        with open(path, 'rb') as f:
+            tokenizer = pickle.load(f)
+        print(f"✓ Tokenizer loaded from {path}")
+        return tokenizer
+    
+    def __len__(self):
+        """Return vocabulary size"""
+        return len(self.word2idx)
+    
+    def __repr__(self):
+        return f"Tokenizer(vocab_size={len(self.word2idx)}, language={self.language})"
