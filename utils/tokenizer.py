@@ -211,3 +211,35 @@ class Tokenizer:
     
     def __repr__(self):
         return f"Tokenizer(vocab_size={len(self.word2idx)}, language={self.language})"
+    
+
+def create_tokenizers(en_sentences: List[str], fr_sentences: List[str]) -> Tuple[Tokenizer, Tokenizer]:
+    """
+    Create and build tokenizers for both languages
+    
+    Args:
+        en_sentences: List of English sentences
+        fr_sentences: List of French sentences
+        
+    Returns:
+        Tuple of (English tokenizer, French tokenizer)
+    """
+    print("=" * 80)
+    print("CREATING TOKENIZERS")
+    print("=" * 80)
+    
+    # Create English tokenizer
+    tokenizer_en = Tokenizer(vocab_size=config.VOCAB_SIZE_EN, language="en")
+    tokenizer_en.build_vocabulary(en_sentences)
+    
+    print()
+    
+    # Create French tokenizer
+    tokenizer_fr = Tokenizer(vocab_size=config.VOCAB_SIZE_FR, language="fr")
+    tokenizer_fr.build_vocabulary(fr_sentences)
+    
+    print("\n" + "=" * 80)
+    print("✓ TOKENIZERS CREATED")
+    print("=" * 80)
+    
+    return tokenizer_en, tokenizer_fr
