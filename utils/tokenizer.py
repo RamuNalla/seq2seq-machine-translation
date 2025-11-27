@@ -243,3 +243,33 @@ def create_tokenizers(en_sentences: List[str], fr_sentences: List[str]) -> Tuple
     print("=" * 80)
     
     return tokenizer_en, tokenizer_fr
+
+
+# Test the tokenizer
+if __name__ == "__main__":
+    # Example usage
+    tokenizer = Tokenizer(vocab_size=1000, language="en")
+    
+    # Sample sentences
+    sentences = [
+        "Hello, how are you?",
+        "I am fine, thank you!",
+        "What is your name?",
+        "My name is Claude."
+    ]
+    
+    # Build vocabulary
+    tokenizer.build_vocabulary(sentences)
+    
+    # Test encoding/decoding
+    print("\nTest Encoding/Decoding:")
+    test_text = "Hello, how are you?"
+    print(f"Original: {test_text}")
+    
+    encoded = tokenizer.encode(test_text, add_sos=True, add_eos=True)
+    print(f"Encoded: {encoded}")
+    
+    decoded = tokenizer.decode(encoded)
+    print(f"Decoded: {decoded}")
+    
+    print(f"\nTokenizer: {tokenizer}")
