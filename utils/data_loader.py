@@ -50,3 +50,26 @@ class TranslationDataset(Dataset):
     def __getitem__(self, idx):
         en_indices, fr_indices = self.pairs[idx]
         return torch.tensor(en_indices, dtype=torch.long), torch.tensor(fr_indices, dtype=torch.long)
+
+
+def collate_fn(batch):
+    """
+    Custom collate function to pad sequences in a batch
+    
+    Args:
+        batch: List of (source, target) tuples
+        
+    Returns:
+        Padded source and target tensors with lengths
+    """
+    src_batch, tgt_batch = zip(*batch)
+    
+    # Pad sequences
+    src_padded = pad_sequence(src_batch, batch_first=True, padding_value=config.PAD_IDX)
+    tgt_padded = pad_sequence(tgt_batch, batch_first=True, padding_value=config.PAD_IDX)
+    
+    # Get lengths (before padding)
+    src_lengths = torch.tensor([len(seq) for seq in src_batch], dtype=torch.long)
+    tgt_lengths = torch.tensor([len(seq) for seq in tgt_batch], dtype=torch.long)
+    
+    return src_padded, tgt_padded, src_lengths, tgt_lengths
