@@ -73,3 +73,28 @@ def collate_fn(batch):
     tgt_lengths = torch.tensor([len(seq) for seq in tgt_batch], dtype=torch.long)
     
     return src_padded, tgt_padded, src_lengths, tgt_lengths
+
+def load_raw_data(file_path: Path) -> Tuple[List[str], List[str]]:
+    """
+    Load raw data from Tatoeba file
+    
+    Args:
+        file_path: Path to fra.txt
+        
+    Returns:
+        Tuple of (English sentences, French sentences)
+    """
+    print(f"Loading data from {file_path}...")
+    
+    en_sentences = []
+    fr_sentences = []
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            parts = line.strip().split('\t')
+            if len(parts) >= 2:
+                en_sentences.append(parts[0])
+                fr_sentences.append(parts[1])
+    
+    print(f"✓ Loaded {len(en_sentences):,} sentence pairs")
+    return en_sentences, fr_sentences
