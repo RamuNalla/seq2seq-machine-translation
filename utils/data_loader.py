@@ -88,7 +88,7 @@ def load_raw_data(file_path: Path) -> Tuple[List[str], List[str]]:
     
     en_sentences = []
     fr_sentences = []
-    
+
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
             parts = line.strip().split('\t')
