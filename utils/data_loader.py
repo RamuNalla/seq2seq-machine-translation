@@ -98,3 +98,113 @@ def load_raw_data(file_path: Path) -> Tuple[List[str], List[str]]:
     
     print(f"✓ Loaded {len(en_sentences):,} sentence pairs")
     return en_sentences, fr_sentences
+
+
+def split_data(en_sentences: List[str], fr_sentences: List[str]) -> Dict[str, Tuple[List[str], List[str]]]:
+    """
+    Split data into train/val/test sets
+    
+    Args:
+        en_sentences: English sentences
+        fr_sentences: French sentences
+        
+    Returns:
+        Dictionary with 'train', 'val', 'test' keys
+    """
+    print("\nSplitting data...")
+    
+    total = len(en_sentences)
+    indices = np.random.permutation(total)
+    
+    train_size = int(total * config.TRAIN_RATIO)
+    val_size = int(total * config.VAL_RATIO)
+    
+    train_idx = indices[:train_size]
+    val_idx = indices[train_size:train_size + val_size]
+    test_idx = indices[train_size + val_size:]
+    
+    splits = {
+        'train': (
+            [en_sentences[i] for i in train_idx],
+            [fr_sentences[i] for i in train_idx]
+        ),
+        'val': (
+            [en_sentences[i] for i in val_idx],
+            [fr_sentences[i] for i in val_idx]
+        ),
+        'test': (
+            [en_sentences[i] for i in test_idx],
+            [fr_sentences[i] for i in test_idx]
+        )
+    }
+    
+    print(f"✓ Train: {len(train_idx):,} pairs")
+    print(f"✓ Val:   {len(val_idx):,} pairs")
+    print(f"✓ Test:  {len(test_idx):,} pairs")
+    
+    return splits
+
+
+def prepare_data():
+    """
+    Main function to prepare all data
+    Loads raw data, creates tokenizers, and saves processed data
+    """
+    print("=" * 80)
+    print("DATA PREPARATION")
+    print("=" * 80)
+    
+    # Load raw data
+    en_sentences, fr_sentences = load_raw_data(config.RAW_DATA_FILE)
+    
+    # Split data
+    splits = split_data(en_sentences, fr_sentences)
+    
+    # Create tokenizers using training data only
+    train_en, train_fr = splits['train']
+    tokenizer_en, tokenizer_fr = create_tokenizers(train_en, train_fr)
+    
+    # Save tokenizers
+    tokenizer_en.save(config.TOKENIZER_EN_PATH)
+    tokenizer_fr.save(config.TOKENIZER_FR_PATH)
+    
+    # Create and save datasets
+    print("\n" + "=" * 80)
+    print("CREATING DATASETS")
+    print("=" * 80)
+    
+    datasets = {}
+    for split_name, (en_sents, fr_sents) in splits.items():
+        print(f"\nCreating {split_name} dataset...")
+        dataset = TranslationDataset(en_sents, fr_sents, tokenizer_en, tokenizer_fr)
+        datasets[split_name] = dataset
+        print(f"✓ {split_name}: {len(dataset):,} pairs (after filtering)")
+        
+        # Save dataset
+        dataset_path = config.PROCESSED_DATA_DIR / f"{split_name}_dataset.pkl"
+        with open(dataset_path, 'wb') as f:
+            pickle.dump(dataset, f)
+        print(f"✓ Saved to {dataset_path}")
+    
+    # Print sample data
+    print("\n" + "=" * 80)
+    print("SAMPLE DATA")
+    print("=" * 80)
+    
+    train_dataset = datasets['train']
+    for i in range(3):
+        src, tgt = train_dataset[i]
+        en_text = tokenizer_en.decode(src.tolist())
+        fr_text = tokenizer_fr.decode(tgt.tolist())
+        print(f"\nPair {i+1}:")
+        print(f"  EN: {en_text}")
+        print(f"  FR: {fr_text}")
+        print(f"  EN indices: {src.tolist()[:10]}...")
+        print(f"  FR indices: {tgt.tolist()[:10]}...")
+    
+    print("\n" + "=" * 80)
+    print("✓ DATA PREPARATION COMPLETE")
+    print("=" * 80)
+    
+    return datasets, tokenizer_en, tokenizer_fr
+
