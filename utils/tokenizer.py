@@ -5,9 +5,14 @@ Handles tokenization, vocabulary building, and sequence encoding/decoding
 
 import re
 import pickle
+import sys
+import os
 from collections import Counter
 from typing import List, Dict, Tuple
 import unicodedata
+
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 
 class Tokenizer:
