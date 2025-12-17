@@ -208,3 +208,26 @@ def prepare_data():
     
     return datasets, tokenizer_en, tokenizer_fr
 
+
+def load_datasets() -> Tuple[Dict[str, Dataset], Tokenizer, Tokenizer]:
+    """
+    Load preprocessed datasets and tokenizers
+    
+    Returns:
+        Tuple of (datasets dict, English tokenizer, French tokenizer)
+    """
+    print("Loading preprocessed data...")
+    
+    # Load tokenizers
+    tokenizer_en = Tokenizer.load(config.TOKENIZER_EN_PATH)
+    tokenizer_fr = Tokenizer.load(config.TOKENIZER_FR_PATH)
+    
+    # Load datasets
+    datasets = {}
+    for split in ['train', 'val', 'test']:
+        dataset_path = config.PROCESSED_DATA_DIR / f"{split}_dataset.pkl"
+        with open(dataset_path, 'rb') as f:
+            datasets[split] = pickle.load(f)
+        print(f"✓ Loaded {split}: {len(datasets[split]):,} pairs")
+    
+    return datasets, tokenizer_en, tokenizer_fr
