@@ -1,4 +1,6 @@
 import torch
+import sys
+import os
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import pandas as pd
@@ -7,7 +9,10 @@ from typing import List, Tuple, Dict
 from pathlib import Path
 import pickle
 
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
+
 from utils.tokenizer import Tokenizer, create_tokenizers
 
 class TranslationDataset(Dataset):
@@ -231,3 +236,79 @@ def load_datasets() -> Tuple[Dict[str, Dataset], Tokenizer, Tokenizer]:
         print(f"✓ Loaded {split}: {len(datasets[split]):,} pairs")
     
     return datasets, tokenizer_en, tokenizer_fr
+
+
+def create_dataloaders(datasets: Dict[str, Dataset], batch_size: int = config.BATCH_SIZE) -> Dict[str, DataLoader]:
+    """
+    Create DataLoaders for all splits
+    
+    Args:
+        datasets: Dictionary of datasets
+        batch_size: Batch size
+        
+    Returns:
+        Dictionary of DataLoaders
+    """
+    dataloaders = {
+        'train': DataLoader(
+            datasets['train'],
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=collate_fn,
+            num_workers=config.NUM_WORKERS,
+            pin_memory=True
+        ),
+        'val': DataLoader(
+            datasets['val'],
+            batch_size=batch_size,
+            shuffle=False,
+            collate_fn=collate_fn,
+            num_workers=config.NUM_WORKERS,
+            pin_memory=True
+        ),
+        'test': DataLoader(
+            datasets['test'],
+            batch_size=batch_size,
+            shuffle=False,
+            collate_fn=collate_fn,
+            num_workers=config.NUM_WORKERS,
+            pin_memory=True
+        )
+    }
+    
+    return dataloaders
+
+# Main execution
+if __name__ == "__main__":
+    # Check if data is already processed
+    if (config.TOKENIZER_EN_PATH.exists() and 
+        config.TOKENIZER_FR_PATH.exists() and
+        (config.PROCESSED_DATA_DIR / "train_dataset.pkl").exists()):
+        
+        print("Preprocessed data already exists!")
+        user_input = input("Reprocess data? (y/N): ")
+        if user_input.lower() != 'y':
+            datasets, tokenizer_en, tokenizer_fr = load_datasets()
+            print("\n✓ Loaded existing data")
+        else:
+            datasets, tokenizer_en, tokenizer_fr = prepare_data()
+    else:
+        datasets, tokenizer_en, tokenizer_fr = prepare_data()
+    
+    # Test dataloader
+    print("\n" + "=" * 80)
+    print("TESTING DATALOADER")
+    print("=" * 80)
+    
+    dataloaders = create_dataloaders(datasets)
+    train_loader = dataloaders['train']
+    
+    # Get one batch
+    src, tgt, src_len, tgt_len = next(iter(train_loader))
+    print(f"\nBatch shapes:")
+    print(f"  Source: {src.shape} (batch_size, max_src_len)")
+    print(f"  Target: {tgt.shape} (batch_size, max_tgt_len)")
+    print(f"  Source lengths: {src_len}")
+    print(f"  Target lengths: {tgt_len}")
+    
+    print("\n✓ Data loading complete!")
