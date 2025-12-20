@@ -18,3 +18,16 @@ class BahdanauAttention(nn.Module):
         alpha_i = softmax(scores)
         context = sum(alpha_i * h_i)
     """
+
+    def __init__(self, hidden_dim: int, attention_dim: int):
+        """
+        Initialize attention mechanism
+        
+        Args:
+            hidden_dim: Dimension of encoder/decoder hidden states
+            attention_dim: Dimension of attention mechanism
+        """
+        super(BahdanauAttention, self).__init__()
+        
+        self.hidden_dim = hidden_dim
+        self.attention_dim = attention_dim
