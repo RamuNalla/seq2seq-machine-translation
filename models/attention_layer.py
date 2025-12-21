@@ -31,3 +31,80 @@ class BahdanauAttention(nn.Module):
         
         self.hidden_dim = hidden_dim
         self.attention_dim = attention_dim
+
+        # Linear transformations for attention score calculation
+        # W1: transforms encoder hidden states
+        self.W_encoder = nn.Linear(hidden_dim, attention_dim, bias=False)
+        
+        # W2: transforms decoder hidden state
+        self.W_decoder = nn.Linear(hidden_dim, attention_dim, bias=False)
+        
+        # v: final linear layer to compute scalar score
+        self.v = nn.Linear(attention_dim, 1, bias=False)
+
+    def forward(self, decoder_hidden: torch.Tensor, encoder_outputs: torch.Tensor,
+                mask: torch.Tensor = None) -> tuple:
+        """
+        Forward pass of attention mechanism
+
+        Args:
+            decoder_hidden: Current decoder hidden state
+                           Shape: (batch_size, hidden_dim)
+            encoder_outputs: All encoder hidden states
+                           Shape: (batch_size, src_len, hidden_dim)
+            mask: Mask for padded positions
+                 Shape: (batch_size, src_len)
+                 
+        Returns:
+            context: Context vector (weighted sum of encoder outputs)
+                    Shape: (batch_size, hidden_dim)
+            attention_weights: Attention weights for visualization
+                             Shape: (batch_size, src_len)
+        """
+
+        batch_size = encoder_outputs.size(0)
+        src_len = encoder_outputs.size(1)
+        
+        # Step 1: Transform encoder outputs
+        # encoder_outputs: (batch_size, src_len, hidden_dim)
+        # transformed_encoder: (batch_size, src_len, attention_dim)
+        transformed_encoder = self.W_encoder(encoder_outputs)
+        
+        # Step 2: Transform decoder hidden state
+        # decoder_hidden: (batch_size, hidden_dim)
+        # transformed_decoder: (batch_size, attention_dim)
+        transformed_decoder = self.W_decoder(decoder_hidden)
+        
+        # Step 3: Broadcast decoder hidden to match encoder outputs length
+        # We need to add transformed_decoder to each position in transformed_encoder
+        # transformed_decoder: (batch_size, attention_dim) -> (batch_size, 1, attention_dim)
+        transformed_decoder = transformed_decoder.unsqueeze(1)
+        
+        # Step 4: Calculate attention scores
+        # Add transformed encoder and decoder, apply tanh, then linear projection
+        # energy: (batch_size, src_len, attention_dim)
+        energy = torch.tanh(transformed_encoder + transformed_decoder)
+        
+        # Project to scalar scores
+        # scores: (batch_size, src_len, 1) -> (batch_size, src_len)
+        scores = self.v(energy).squeeze(-1)
+        
+        # Step 5: Apply mask if provided (for padded positions)
+        if mask is not None:
+            # Set scores for padded positions to very large negative value
+            # so softmax gives them near-zero attention
+            scores = scores.masked_fill(mask == 0, -1e10)
+        
+        # Step 6: Apply softmax to get attention weights
+        # attention_weights: (batch_size, src_len)
+        # These weights sum to 1 and indicate importance of each encoder position
+        attention_weights = F.softmax(scores, dim=1)
+        
+        # Step 7: Compute context vector as weighted sum of encoder outputs
+        # attention_weights: (batch_size, src_len) -> (batch_size, 1, src_len)
+        # encoder_outputs: (batch_size, src_len, hidden_dim)
+        # context: (batch_size, 1, hidden_dim) -> (batch_size, hidden_dim)
+        context = torch.bmm(attention_weights.unsqueeze(1), encoder_outputs)
+        context = context.squeeze(1)
+        
+        return context, attention_weights
