@@ -302,3 +302,44 @@ class LuongAttention(nn.Module):
         context = torch.bmm(attention_weights.unsqueeze(1), encoder_outputs).squeeze(1)
         
         return context, attention_weights
+
+def forward(self, decoder_hidden: torch.Tensor, encoder_outputs: torch.Tensor,
+                mask: torch.Tensor = None) -> tuple:
+        """
+        Forward pass of Luong attention
+        
+        Args:
+            decoder_hidden: (batch_size, hidden_dim)
+            encoder_outputs: (batch_size, src_len, hidden_dim)
+            mask: (batch_size, src_len)
+            
+        Returns:
+            context: (batch_size, hidden_dim)
+            attention_weights: (batch_size, src_len)
+        """
+        # Transform decoder hidden if using general attention
+        if self.attention_type == "general":
+            # decoder_hidden: (batch_size, hidden_dim)
+            transformed = self.W(decoder_hidden)  # (batch_size, hidden_dim)
+            # Add dimension for batch matrix multiplication
+            transformed = transformed.unsqueeze(1)  # (batch_size, 1, hidden_dim)
+        else:  # dot attention
+            transformed = decoder_hidden.unsqueeze(1)  # (batch_size, 1, hidden_dim)
+        
+        # Calculate scores using batch matrix multiplication
+        # transformed: (batch_size, 1, hidden_dim)
+        # encoder_outputs: (batch_size, src_len, hidden_dim)
+        # scores: (batch_size, 1, src_len) -> (batch_size, src_len)
+        scores = torch.bmm(transformed, encoder_outputs.transpose(1, 2)).squeeze(1)
+        
+        # Apply mask
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e10)
+        
+        # Softmax to get attention weights
+        attention_weights = F.softmax(scores, dim=1)
+        
+        # Compute context vector
+        context = torch.bmm(attention_weights.unsqueeze(1), encoder_outputs).squeeze(1)
+        
+        return context, attention_weights
