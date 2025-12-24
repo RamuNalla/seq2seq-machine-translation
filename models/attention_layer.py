@@ -343,3 +343,36 @@ def forward(self, decoder_hidden: torch.Tensor, encoder_outputs: torch.Tensor,
         context = torch.bmm(attention_weights.unsqueeze(1), encoder_outputs).squeeze(1)
         
         return context, attention_weights
+
+
+# Test the attention mechanisms
+if __name__ == "__main__":
+    print("=" * 80)
+    print("TESTING ATTENTION MECHANISMS")
+    print("=" * 80)
+    
+    # Parameters
+    batch_size = 4
+    src_len = 10
+    hidden_dim = 512
+    attention_dim = 256
+    
+    # Create dummy data
+    decoder_hidden = torch.randn(batch_size, hidden_dim)
+    encoder_outputs = torch.randn(batch_size, src_len, hidden_dim)
+    
+    # Create mask (simulate that last 3 positions are padding)
+    mask = torch.ones(batch_size, src_len)
+    mask[:, -3:] = 0
+    
+    print(f"\nInput shapes:")
+    print(f"  Decoder hidden: {decoder_hidden.shape}")
+    print(f"  Encoder outputs: {encoder_outputs.shape}")
+    print(f"  Mask: {mask.shape}")
+    
+    # Test Bahdanau Attention
+    print("\n" + "-" * 80)
+    print("Bahdanau Attention:")
+    print("-" * 80)
+    bahdanau = BahdanauAttention(hidden_dim, attention_dim)
+    context_b, weights_b = bahdanau(decoder_hidden, encoder_outputs, mask)
