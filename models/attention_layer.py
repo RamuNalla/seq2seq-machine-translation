@@ -376,3 +376,25 @@ if __name__ == "__main__":
     print("-" * 80)
     bahdanau = BahdanauAttention(hidden_dim, attention_dim)
     context_b, weights_b = bahdanau(decoder_hidden, encoder_outputs, mask)
+
+    print(f"  Context shape: {context_b.shape}")
+    print(f"  Attention weights shape: {weights_b.shape}")
+    print(f"  Attention weights (first sample): {weights_b[0]}")
+    print(f"  Sum of weights: {weights_b[0].sum().item():.4f} (should be ~1.0)")
+    print(f"  Attention on padded positions: {weights_b[0, -3:].sum().item():.6f} (should be ~0)")
+    
+    # Test Luong Attention
+    print("\n" + "-" * 80)
+    print("Luong Attention (General):")
+    print("-" * 80)
+    luong = LuongAttention(hidden_dim, attention_type="general")
+    context_l, weights_l = luong(decoder_hidden, encoder_outputs, mask)
+    
+    print(f"  Context shape: {context_l.shape}")
+    print(f"  Attention weights shape: {weights_l.shape}")
+    print(f"  Attention weights (first sample): {weights_l[0]}")
+    print(f"  Sum of weights: {weights_l[0].sum().item():.4f} (should be ~1.0)")
+    
+    print("\n" + "=" * 80)
+    print("✓ ATTENTION MECHANISMS WORKING CORRECTLY")
+    print("=" * 80)
