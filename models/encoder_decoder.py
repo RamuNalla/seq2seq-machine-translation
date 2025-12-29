@@ -48,3 +48,34 @@ class Encoder(nn.Module):
         )
         
         self.dropout = nn.Dropout(dropout)
+
+    def forward(self, src: torch.Tensor, src_lengths: torch.Tensor = None):
+        """
+        Forward pass
+        
+        Args:
+            src: Source sequences (batch_size, src_len)
+            src_lengths: Actual lengths of sequences (batch_size,)
+            
+        Returns:
+            hidden: Final hidden states (num_layers, batch_size, hidden_dim)
+            cell: Final cell states (num_layers, batch_size, hidden_dim)
+        """
+        # Embed source sequences
+        embedded = self.embedding(src)  # (batch_size, src_len, embedding_dim)
+        embedded = self.dropout(embedded)
+        
+        # Pack padded sequences if lengths provided (for efficiency)
+        if src_lengths is not None:
+            embedded = nn.utils.rnn.pack_padded_sequence(
+                embedded, src_lengths.cpu(), batch_first=True, enforce_sorted=False
+            )
+        
+        # Pass through LSTM
+        # We only need the final hidden and cell states (the context vector)
+        _, (hidden, cell) = self.lstm(embedded)
+        
+        # hidden: (num_layers, batch_size, hidden_dim)
+        # cell: (num_layers, batch_size, hidden_dim)
+        
+        return hidden, cell
