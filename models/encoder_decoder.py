@@ -79,3 +79,44 @@ class Encoder(nn.Module):
         # cell: (num_layers, batch_size, hidden_dim)
         
         return hidden, cell
+
+    class Decoder(nn.Module):
+    """
+    LSTM Decoder
+    Takes context vector from encoder and generates target sequence
+    """
+    
+    def __init__(self, vocab_size: int, embedding_dim: int, hidden_dim: int,
+                 num_layers: int = 2, dropout: float = 0.3):
+        """
+        Initialize decoder
+        
+        Args:
+            vocab_size: Size of target vocabulary
+            embedding_dim: Dimension of word embeddings
+            hidden_dim: Dimension of LSTM hidden states
+            num_layers: Number of LSTM layers
+            dropout: Dropout probability
+        """
+        super(Decoder, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        
+        # Word embedding layer
+        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=config.PAD_IDX)
+        
+        # LSTM layer
+        self.lstm = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout if num_layers > 1 else 0,
+            batch_first=True
+        )
+        
+        # Output layer to project to vocabulary
+        self.fc_out = nn.Linear(hidden_dim, vocab_size)
+        
+        self.dropout = nn.Dropout(dropout)
