@@ -120,3 +120,32 @@ class Encoder(nn.Module):
         self.fc_out = nn.Linear(hidden_dim, vocab_size)
         
         self.dropout = nn.Dropout(dropout)
+
+     def forward(self, input: torch.Tensor, hidden: torch.Tensor, cell: torch.Tensor):
+        """
+        Forward pass for one timestep
+        
+        Args:
+            input: Current input token (batch_size, 1)
+            hidden: Previous hidden state (num_layers, batch_size, hidden_dim)
+            cell: Previous cell state (num_layers, batch_size, hidden_dim)
+            
+        Returns:
+            output: Predictions for next token (batch_size, vocab_size)
+            hidden: New hidden state (num_layers, batch_size, hidden_dim)
+            cell: New cell state (num_layers, batch_size, hidden_dim)
+        """
+        # input: (batch_size, 1) - single token
+        
+        # Embed input token
+        embedded = self.embedding(input)  # (batch_size, 1, embedding_dim)
+        embedded = self.dropout(embedded)
+        
+        # Pass through LSTM with previous hidden/cell states
+        output, (hidden, cell) = self.lstm(embedded, (hidden, cell))
+        # output: (batch_size, 1, hidden_dim)
+        
+        # Project to vocabulary
+        prediction = self.fc_out(output.squeeze(1))  # (batch_size, vocab_size)
+        
+        return prediction, hidden, cell
