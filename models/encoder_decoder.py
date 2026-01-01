@@ -149,3 +149,33 @@ class Encoder(nn.Module):
         prediction = self.fc_out(output.squeeze(1))  # (batch_size, vocab_size)
         
         return prediction, hidden, cell
+
+class Seq2Seq(nn.Module):
+    """
+    Complete Seq2Seq model combining encoder and decoder
+    
+    THE BOTTLENECK PROBLEM:
+    The decoder only receives the encoder's final states once at initialization.
+    For long sentences, this single context vector cannot capture all information.
+    """
+    
+    def __init__(self, encoder: Encoder, decoder: Decoder, device: torch.device):
+        """
+        Initialize Seq2Seq model
+        
+        Args:
+            encoder: Encoder module
+            decoder: Decoder module
+            device: Device to run on
+        """
+        super(Seq2Seq, self).__init__()
+        
+        self.encoder = encoder
+        self.decoder = decoder
+        self.device = device
+        
+        # Ensure encoder and decoder have same hidden dimensions
+        assert encoder.hidden_dim == decoder.hidden_dim, \
+            "Encoder and decoder must have same hidden dimensions"
+        assert encoder.num_layers == decoder.num_layers, \
+            "Encoder and decoder must have same number of layers"
