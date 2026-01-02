@@ -179,3 +179,53 @@ class Seq2Seq(nn.Module):
             "Encoder and decoder must have same hidden dimensions"
         assert encoder.num_layers == decoder.num_layers, \
             "Encoder and decoder must have same number of layers"
+
+    def forward(self, src: torch.Tensor, tgt: torch.Tensor,
+                src_lengths: torch.Tensor = None,
+                teacher_forcing_ratio: float = 0.5):
+        """
+        Forward pass
+        
+        Args:
+            src: Source sequences (batch_size, src_len)
+            tgt: Target sequences (batch_size, tgt_len)
+            src_lengths: Source sequence lengths
+            teacher_forcing_ratio: Probability of using teacher forcing
+            
+        Returns:
+            outputs: Predictions (batch_size, tgt_len, vocab_size)
+        """
+        batch_size = src.size(0)
+        tgt_len = tgt.size(1)
+        vocab_size = self.decoder.vocab_size
+        
+        # Tensor to store decoder outputs
+        outputs = torch.zeros(batch_size, tgt_len, vocab_size).to(self.device)
+        
+        # Encode entire source sequence
+        # THIS IS THE BOTTLENECK: Only these final states capture the entire sentence
+        hidden, cell = self.encoder(src, src_lengths)
+        
+        # First input to decoder is SOS token
+        input = tgt[:, 0].unsqueeze(1)  # (batch_size, 1)
+        
+        # Decode one token at a time
+        for t in range(1, tgt_len):
+            # Pass through decoder
+            output, hidden, cell = self.decoder(input, hidden, cell)
+            
+            # Store predictions
+            outputs[:, t, :] = output
+            
+            # Decide whether to use teacher forcing
+            teacher_force = torch.rand(1).item() < teacher_forcing_ratio
+            
+            # Get next input
+            if teacher_force:
+                # Use actual next token from target (teacher forcing)
+                input = tgt[:, t].unsqueeze(1)
+            else:
+                # Use predicted token
+                input = output.argmax(1).unsqueeze(1)
+        
+        return outputs
