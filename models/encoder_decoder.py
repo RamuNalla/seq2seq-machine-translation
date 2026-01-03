@@ -229,3 +229,29 @@ class Seq2Seq(nn.Module):
                 input = output.argmax(1).unsqueeze(1)
         
         return outputs
+
+        def translate(self, src: torch.Tensor, src_lengths: torch.Tensor = None,
+                  max_length: int = 50):
+        """
+        Translate a source sentence (inference mode)
+        
+        Args:
+            src: Source sequence (batch_size, src_len)
+            src_lengths: Source sequence lengths
+            max_length: Maximum length to generate
+            
+        Returns:
+            translations: Generated sequences (batch_size, max_len)
+        """
+        self.eval()
+        batch_size = src.size(0)
+        
+        with torch.no_grad():
+            # Encode source
+            hidden, cell = self.encoder(src, src_lengths)
+            
+            # Start with SOS token
+            input = torch.full((batch_size, 1), config.SOS_IDX, dtype=torch.long).to(self.device)
+            
+            # Store translations
+            translations = [input]
