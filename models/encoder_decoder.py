@@ -255,3 +255,23 @@ class Seq2Seq(nn.Module):
             
             # Store translations
             translations = [input]
+
+             # Generate tokens one by one
+            for _ in range(max_length):
+                output, hidden, cell = self.decoder(input, hidden, cell)
+                
+                # Get predicted token
+                predicted = output.argmax(1).unsqueeze(1)
+                translations.append(predicted)
+                
+                # Check if all sequences have generated EOS
+                if (predicted == config.EOS_IDX).all():
+                    break
+                
+                # Next input is predicted token
+                input = predicted
+            
+            # Concatenate all tokens
+            translations = torch.cat(translations, dim=1)
+        
+        return translations
