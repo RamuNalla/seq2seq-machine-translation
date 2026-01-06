@@ -230,7 +230,7 @@ class Seq2Seq(nn.Module):
         
         return outputs
 
-        def translate(self, src: torch.Tensor, src_lengths: torch.Tensor = None,
+    def translate(self, src: torch.Tensor, src_lengths: torch.Tensor = None,
                   max_length: int = 50):
         """
         Translate a source sentence (inference mode)
@@ -255,8 +255,8 @@ class Seq2Seq(nn.Module):
             
             # Store translations
             translations = [input]
-
-             # Generate tokens one by one
+            
+            # Generate tokens one by one
             for _ in range(max_length):
                 output, hidden, cell = self.decoder(input, hidden, cell)
                 
