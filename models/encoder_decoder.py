@@ -275,3 +275,39 @@ class Seq2Seq(nn.Module):
             translations = torch.cat(translations, dim=1)
         
         return translations
+    
+
+def create_baseline_model(src_vocab_size: int, tgt_vocab_size: int,
+                          device: torch.device) -> Seq2Seq:
+    """
+    Factory function to create baseline model
+    
+    Args:
+        src_vocab_size: Source vocabulary size
+        tgt_vocab_size: Target vocabulary size
+        device: Device to run on
+        
+    Returns:
+        Seq2Seq model
+    """
+    model_config = config.BaselineConfig()
+    
+    encoder = Encoder(
+        vocab_size=src_vocab_size,
+        embedding_dim=model_config.embedding_dim,
+        hidden_dim=model_config.hidden_dim,
+        num_layers=model_config.encoder_layers,
+        dropout=model_config.dropout
+    )
+    
+    decoder = Decoder(
+        vocab_size=tgt_vocab_size,
+        embedding_dim=model_config.embedding_dim,
+        hidden_dim=model_config.hidden_dim,
+        num_layers=model_config.decoder_layers,
+        dropout=model_config.dropout
+    )
+    
+    model = Seq2Seq(encoder, decoder, device).to(device)
+    
+    return model
