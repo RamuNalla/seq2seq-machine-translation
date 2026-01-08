@@ -311,3 +311,17 @@ def create_baseline_model(src_vocab_size: int, tgt_vocab_size: int,
     model = Seq2Seq(encoder, decoder, device).to(device)
     
     return model
+
+# Test the model
+if __name__ == "__main__":
+    print("=" * 80)
+    print("TESTING BASELINE ENCODER-DECODER MODEL")
+    print("=" * 80)
+    
+    # Parameters
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    src_vocab_size = 5000
+    tgt_vocab_size = 5000
+    batch_size = 4
+    src_len = 10
+    tgt_len = 12
