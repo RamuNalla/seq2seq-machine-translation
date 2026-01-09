@@ -325,3 +325,17 @@ if __name__ == "__main__":
     batch_size = 4
     src_len = 10
     tgt_len = 12
+
+     # Create model
+    model = create_baseline_model(src_vocab_size, tgt_vocab_size, device)
+    print(f"\nModel created on {device}")
+    print(f"Total parameters: {sum(p.numel() for p in model.parameters()):,}")
+    
+    # Create dummy data
+    src = torch.randint(0, src_vocab_size, (batch_size, src_len)).to(device)
+    tgt = torch.randint(0, tgt_vocab_size, (batch_size, tgt_len)).to(device)
+    src_lengths = torch.full((batch_size,), src_len, dtype=torch.long)
+    
+    print(f"\nInput shapes:")
+    print(f"  Source: {src.shape}")
+    print(f"  Target: {tgt.shape}")
