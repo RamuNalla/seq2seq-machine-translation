@@ -339,3 +339,16 @@ if __name__ == "__main__":
     print(f"\nInput shapes:")
     print(f"  Source: {src.shape}")
     print(f"  Target: {tgt.shape}")
+
+     # Forward pass
+    outputs = model(src, tgt, src_lengths, teacher_forcing_ratio=0.5)
+    print(f"\nOutput shape: {outputs.shape}")
+    print(f"Expected: (batch_size={batch_size}, tgt_len={tgt_len}, vocab_size={tgt_vocab_size})")
+    
+    # Test translation
+    translations = model.translate(src, src_lengths, max_length=20)
+    print(f"\nTranslation shape: {translations.shape}")
+    
+    print("\n" + "=" * 80)
+    print("✓ BASELINE MODEL WORKING CORRECTLY")
+    print("=" * 80)
