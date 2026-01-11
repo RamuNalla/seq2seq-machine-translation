@@ -80,7 +80,7 @@ class Encoder(nn.Module):
         
         return hidden, cell
 
-    class Decoder(nn.Module):
+class Decoder(nn.Module):
     """
     LSTM Decoder
     Takes context vector from encoder and generates target sequence
