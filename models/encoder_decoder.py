@@ -16,7 +16,6 @@ class Encoder(nn.Module):
     LSTM Encoder
     Reads input sequence and produces final hidden/cell states as context
     """
-    
     def __init__(self, vocab_size: int, embedding_dim: int, hidden_dim: int,
                  num_layers: int = 2, dropout: float = 0.3):
         """
@@ -121,7 +120,7 @@ class Decoder(nn.Module):
         
         self.dropout = nn.Dropout(dropout)
 
-     def forward(self, input: torch.Tensor, hidden: torch.Tensor, cell: torch.Tensor):
+    def forward(self, input: torch.Tensor, hidden: torch.Tensor, cell: torch.Tensor):
         """
         Forward pass for one timestep
         
