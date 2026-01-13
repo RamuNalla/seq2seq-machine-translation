@@ -120,7 +120,7 @@ class Decoder(nn.Module):
         
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, input: torch.Tensor, hidden: torch.Tensor, cell: torch.Tensor):
+    def forward(self, input: torch.Tensor, hidden: torch.Tensor, cell: torch.Tensor):  # how to predict the next single word
         """
         Forward pass for one timestep
         
