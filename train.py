@@ -1,6 +1,6 @@
 """
 Training script for NMT models
-Supports both baseline and attention models with full logging and checkpointing
+Fixed for PyTorch compatibility and CPU training
 """
 
 import torch
@@ -13,8 +13,7 @@ from tqdm import tqdm
 import time
 import json
 import numpy as np
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import config
 from utils.data_loader import load_datasets, create_dataloaders
 from models.encoder_decoder import create_baseline_model
@@ -22,19 +21,20 @@ from models.attention_model import create_attention_model
 from utils.metrics import evaluate_model, BLEUScorer
 from utils.visualization import visualize_translation
 
+
 class Trainer:
     """
     Trainer class for NMT models
     Handles training, validation, checkpointing, and logging
     """
-
-    def __init__(self, model_type: str, num_epochs: int = 20):
+    
+    def __init__(self, model_type: str, num_epochs: int = 10):
         """
         Initialize trainer
         
         Args:
             model_type: 'baseline' or 'attention'
-            num_epochs: Number of epochs to train (basically we loop through the dataset)
+            num_epochs: Number of epochs to train
         """
         self.model_type = model_type
         self.num_epochs = num_epochs
@@ -73,13 +73,12 @@ class Trainer:
             weight_decay=config.WEIGHT_DECAY
         )
         
-        # Learning rate scheduler
+        # Learning rate scheduler - FIXED: Removed verbose parameter
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer,
             mode='min',
             factor=config.LR_SCHEDULER_FACTOR,
-            patience=config.LR_SCHEDULER_PATIENCE,
-            verbose=True
+            patience=config.LR_SCHEDULER_PATIENCE
         )
         
         # TensorBoard writer
@@ -91,7 +90,8 @@ class Trainer:
         self.train_losses = []
         self.val_losses = []
         self.bleu_scores = []
-
+        self.last_lr = config.LEARNING_RATE
+        
     def train_epoch(self, epoch: int) -> float:
         """
         Train for one epoch
@@ -128,8 +128,6 @@ class Trainer:
                 output = self.model(src, tgt, src_len, config.TEACHER_FORCING_RATIO)
             
             # Reshape for loss calculation
-            # output: (batch_size, tgt_len, vocab_size)
-            # We skip the first token (SOS) in target
             output_reshaped = output[:, 1:].reshape(-1, output.shape[-1])
             tgt_reshaped = tgt[:, 1:].reshape(-1)
             
@@ -139,7 +137,7 @@ class Trainer:
             # Backward pass
             loss.backward()
             
-            # Clip gradients to prevent exploding gradients
+            # Clip gradients
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), config.GRADIENT_CLIP)
             
             # Update weights
@@ -165,7 +163,7 @@ class Trainer:
     
     def validate(self) -> float:
         """
-        Validate the model on unseen data
+        Validate the model
         
         Returns:
             Average validation loss
@@ -241,7 +239,7 @@ class Trainer:
         if is_best:
             torch.save(checkpoint, self.model_save_path)
             print(f"  ✓ Saved best model to {self.model_save_path}")
-
+    
     def visualize_sample_translations(self, epoch: int):
         """
         Visualize attention for sample translations
@@ -255,8 +253,8 @@ class Trainer:
         # Sample sentences for visualization
         sample_sentences = [
             "Hello, how are you?",
-            "I love learning about artificial intelligence.",
-            "The weather is beautiful today."
+            "I love learning.",
+            "The weather is beautiful."
         ]
         
         for idx, sentence in enumerate(sample_sentences):
@@ -279,8 +277,7 @@ class Trainer:
                     plt.close(fig)
             except Exception as e:
                 print(f"  ✗ Error visualizing sample {idx+1}: {e}")
-
-
+    
     def train(self):
         """
         Main training loop
@@ -304,7 +301,12 @@ class Trainer:
             self.scheduler.step(val_loss)
             current_lr = self.optimizer.param_groups[0]['lr']
             
-            # Calculate BLEU scores every few epochs
+            # Check if LR changed
+            if current_lr != self.last_lr:
+                print(f"\n  ⚡ Learning rate reduced: {self.last_lr:.6f} → {current_lr:.6f}")
+                self.last_lr = current_lr
+            
+            # Calculate BLEU scores every 5 epochs or last epoch
             if epoch % 5 == 0 or epoch == self.num_epochs:
                 bleu_scores = self.evaluate_bleu()
                 self.bleu_scores.append({
@@ -314,7 +316,8 @@ class Trainer:
                 
                 # Log BLEU scores
                 for metric, score in bleu_scores.items():
-                    self.writer.add_scalar(f'BLEU/{metric}', score, epoch)
+                    if metric in ['bleu', 'bleu1', 'bleu2', 'bleu3', 'bleu4']:
+                        self.writer.add_scalar(f'BLEU/{metric}', score, epoch)
             else:
                 bleu_scores = None
             
@@ -338,7 +341,8 @@ class Trainer:
             if bleu_scores:
                 print(f'  BLEU Scores:')
                 for metric, score in bleu_scores.items():
-                    print(f'    {metric}: {score:.2f}')
+                    if metric in ['bleu', 'bleu1', 'bleu2', 'bleu3', 'bleu4']:
+                        print(f'    {metric}: {score:.2f}')
             
             # Check if this is the best model
             is_best = val_loss < self.best_val_loss
@@ -402,14 +406,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Train baseline model for 20 epochs
-  python train.py --model baseline --epochs 20
+  # Train baseline model for 10 epochs
+  python train.py --model baseline --epochs 10
   
   # Train attention model with custom batch size
-  python train.py --model attention --epochs 30 --batch_size 32
-  
-  # Resume training from checkpoint
-  python train.py --model attention --resume
+  python train.py --model attention --epochs 10 --batch_size 16
         """
     )
     
@@ -424,8 +425,8 @@ Examples:
     parser.add_argument(
         '--epochs',
         type=int,
-        default=20,
-        help='Number of training epochs (default: 20)'
+        default=10,
+        help='Number of training epochs (default: 10)'
     )
     
     parser.add_argument(
@@ -440,12 +441,6 @@ Examples:
         type=float,
         default=None,
         help=f'Learning rate (default: {config.LEARNING_RATE})'
-    )
-    
-    parser.add_argument(
-        '--resume',
-        action='store_true',
-        help='Resume training from checkpoint'
     )
     
     args = parser.parse_args()
@@ -465,15 +460,11 @@ Examples:
     print(f"Batch Size:        {config.BATCH_SIZE}")
     print(f"Learning Rate:     {config.LEARNING_RATE}")
     print(f"Device:            {config.DEVICE}")
-    print(f"Resume Training:   {args.resume}")
+    print(f"Resume Training:   False")
     print("=" * 80 + "\n")
     
     # Create trainer
     trainer = Trainer(args.model, args.epochs)
-    
-    # TODO: Implement resume functionality
-    if args.resume:
-        print("⚠️  Resume functionality not yet implemented")
     
     # Start training
     trainer.train()

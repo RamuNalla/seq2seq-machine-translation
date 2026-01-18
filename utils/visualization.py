@@ -1,8 +1,10 @@
 """
-Attention visualization utilities
-Creates heatmaps and plots to visualize attention weights
+Attention visualization utilities - SIMPLIFIED ROBUST VERSION
+Creates heatmaps using matplotlib (more compatible)
 """
 
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend for compatibility
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -20,7 +22,7 @@ def plot_attention(attention_weights: np.ndarray,
                    save_path: Optional[Path] = None,
                    title: str = "Attention Weights") -> plt.Figure:
     """
-    Plot attention heatmap
+    Plot attention heatmap using matplotlib/seaborn
     
     Args:
         attention_weights: Attention weights matrix (tgt_len, src_len)
@@ -41,8 +43,8 @@ def plot_attention(attention_weights: np.ndarray,
         attention_weights,
         xticklabels=src_tokens,
         yticklabels=tgt_tokens,
-        cmap='YlOrRd',  # Yellow-Orange-Red colormap
-        annot=len(src_tokens) < 15 and len(tgt_tokens) < 15,  # Show values if small
+        cmap='YlOrRd',
+        annot=len(src_tokens) < 15 and len(tgt_tokens) < 15,
         fmt='.2f',
         cbar_kws={'label': 'Attention Weight'},
         linewidths=0.5,
@@ -58,8 +60,8 @@ def plot_attention(attention_weights: np.ndarray,
     ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
     
     # Rotate labels
-    plt.xticks(rotation=45, ha='right')
-    plt.yticks(rotation=0)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+    plt.setp(ax.get_yticklabels(), rotation=0)
     
     # Tight layout
     plt.tight_layout()
@@ -69,72 +71,6 @@ def plot_attention(attention_weights: np.ndarray,
         save_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"✓ Saved attention plot to {save_path}")
-    
-    return fig
-
-
-def plot_attention_comparison(baseline_translation: str,
-                              attention_translation: str,
-                              attention_weights: np.ndarray,
-                              src_tokens: List[str],
-                              tgt_tokens: List[str],
-                              source_sentence: str,
-                              save_path: Optional[Path] = None) -> plt.Figure:
-    """
-    Plot comparison between baseline and attention models with attention heatmap
-    
-    Args:
-        baseline_translation: Translation from baseline model
-        attention_translation: Translation from attention model
-        attention_weights: Attention weights (tgt_len, src_len)
-        src_tokens: Source tokens
-        tgt_tokens: Target tokens
-        source_sentence: Original source sentence
-        save_path: Path to save figure
-        
-    Returns:
-        Matplotlib figure
-    """
-    fig = plt.figure(figsize=(14, 10))
-    gs = fig.add_gridspec(3, 1, height_ratios=[1, 1, 3], hspace=0.4)
-    
-    # Source sentence
-    ax1 = fig.add_subplot(gs[0])
-    ax1.text(0.5, 0.5, f"Source (EN): {source_sentence}", 
-             ha='center', va='center', fontsize=12, wrap=True)
-    ax1.axis('off')
-    
-    # Translations comparison
-    ax2 = fig.add_subplot(gs[1])
-    comparison_text = f"Baseline: {baseline_translation}\n\nAttention: {attention_translation}"
-    ax2.text(0.5, 0.5, comparison_text, 
-             ha='center', va='center', fontsize=11, 
-             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
-    ax2.axis('off')
-    
-    # Attention heatmap
-    ax3 = fig.add_subplot(gs[2])
-    sns.heatmap(
-        attention_weights,
-        xticklabels=src_tokens,
-        yticklabels=tgt_tokens,
-        cmap='YlOrRd',
-        annot=len(src_tokens) < 12,
-        fmt='.2f',
-        cbar_kws={'label': 'Attention Weight'},
-        linewidths=0.5,
-        ax=ax3
-    )
-    ax3.set_xlabel('Source Tokens', fontsize=11)
-    ax3.set_ylabel('Target Tokens', fontsize=11)
-    ax3.set_title('Attention Weights Heatmap', fontsize=12, fontweight='bold')
-    
-    plt.setp(ax3.get_xticklabels(), rotation=45, ha='right')
-    
-    if save_path:
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"✓ Saved comparison plot to {save_path}")
     
     return fig
 
@@ -314,54 +250,6 @@ def plot_model_comparison(baseline_scores: dict,
     return fig
 
 
-def plot_length_analysis(length_results: dict,
-                         save_path: Optional[Path] = None) -> plt.Figure:
-    """
-    Plot BLEU scores by sentence length
-    
-    Args:
-        length_results: Dictionary with results by length bucket
-        save_path: Path to save figure
-        
-    Returns:
-        Matplotlib figure
-    """
-    categories = list(length_results.keys())
-    bleu_scores = [length_results[cat]['bleu'] for cat in categories]
-    counts = [length_results[cat]['count'] for cat in categories]
-    
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
-    # BLEU scores by length
-    ax1.bar(categories, bleu_scores, color=['lightblue', 'steelblue', 'darkblue'], alpha=0.8)
-    ax1.set_xlabel('Sentence Length', fontsize=12)
-    ax1.set_ylabel('BLEU Score', fontsize=12)
-    ax1.set_title('BLEU Score by Sentence Length', fontsize=14, fontweight='bold')
-    ax1.grid(True, axis='y', alpha=0.3)
-    
-    for i, (cat, score) in enumerate(zip(categories, bleu_scores)):
-        ax1.text(i, score + 1, f'{score:.1f}', ha='center', fontweight='bold')
-    
-    # Sample counts
-    ax2.bar(categories, counts, color=['lightcoral', 'indianred', 'darkred'], alpha=0.8)
-    ax2.set_xlabel('Sentence Length', fontsize=12)
-    ax2.set_ylabel('Number of Samples', fontsize=12)
-    ax2.set_title('Sample Distribution by Length', fontsize=14, fontweight='bold')
-    ax2.grid(True, axis='y', alpha=0.3)
-    
-    for i, (cat, count) in enumerate(zip(categories, counts)):
-        ax2.text(i, count + max(counts)*0.02, f'{count}', ha='center', fontweight='bold')
-    
-    plt.tight_layout()
-    
-    if save_path:
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"✓ Saved length analysis plot to {save_path}")
-    
-    return fig
-
-
 # Testing
 if __name__ == "__main__":
     print("=" * 80)
@@ -371,18 +259,24 @@ if __name__ == "__main__":
     # Test attention heatmap
     print("\nTest 1: Attention Heatmap")
     attention = np.random.rand(5, 7)
-    attention = attention / attention.sum(axis=1, keepdims=True)  # Normalize rows
+    attention = attention / attention.sum(axis=1, keepdims=True)
     
     src_tokens = ['hello', 'how', 'are', 'you', '?', '<eos>']
     tgt_tokens = ['bonjour', 'comment', 'allez', 'vous', '?']
     
-    fig = plot_attention(
-        attention, 
-        src_tokens, 
-        tgt_tokens,
-        save_path=config.VISUALIZATION_DIR / "test_attention.png"
-    )
-    plt.close(fig)
+    try:
+        fig = plot_attention(
+            attention, 
+            src_tokens, 
+            tgt_tokens,
+            save_path=config.VISUALIZATION_DIR / "test_attention.png"
+        )
+        plt.close(fig)
+        print("✓ Attention heatmap test passed")
+    except Exception as e:
+        print(f"✗ Attention heatmap test failed: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Test training curves
     print("\nTest 2: Training Curves")
@@ -393,25 +287,37 @@ if __name__ == "__main__":
         {'epoch': 10, 'bleu': 32.8},
     ]
     
-    fig = plot_training_curves(
-        train_losses,
-        val_losses,
-        bleu_scores,
-        save_path=config.VISUALIZATION_DIR / "test_training_curves.png"
-    )
-    plt.close(fig)
+    try:
+        fig = plot_training_curves(
+            train_losses,
+            val_losses,
+            bleu_scores,
+            save_path=config.VISUALIZATION_DIR / "test_training_curves.png"
+        )
+        plt.close(fig)
+        print("✓ Training curves test passed")
+    except Exception as e:
+        print(f"✗ Training curves test failed: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Test model comparison
     print("\nTest 3: Model Comparison")
     baseline = {'bleu1': 45, 'bleu2': 32, 'bleu3': 23, 'bleu4': 17}
     attention = {'bleu1': 58, 'bleu2': 48, 'bleu3': 39, 'bleu4': 32}
     
-    fig = plot_model_comparison(
-        baseline,
-        attention,
-        save_path=config.VISUALIZATION_DIR / "test_comparison.png"
-    )
-    plt.close(fig)
+    try:
+        fig = plot_model_comparison(
+            baseline,
+            attention,
+            save_path=config.VISUALIZATION_DIR / "test_comparison.png"
+        )
+        plt.close(fig)
+        print("✓ Model comparison test passed")
+    except Exception as e:
+        print(f"✗ Model comparison test failed: {e}")
+        import traceback
+        traceback.print_exc()
     
     print("\n" + "=" * 80)
     print("✓ VISUALIZATION TESTS COMPLETE")

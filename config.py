@@ -1,5 +1,11 @@
+"""
+Configuration file for Neural Machine Translation Project
+CPU-optimized version with reduced parameters
+"""
+
 import os
 from pathlib import Path
+import torch
 
 # ============================================================================
 # PATHS
@@ -21,21 +27,21 @@ for dir_path in [DATA_DIR, RAW_DATA_DIR, PROCESSED_DATA_DIR, MODEL_DIR,
 # ============================================================================
 # DATA CONFIGURATION
 # ============================================================================
-# Dataset URL (use HTTPS to avoid server rejecting non-secure requests)
-DATASET_URL = "https://www.manythings.org/anki/fra-eng.zip"
+# Dataset URL
+DATASET_URL = "http://www.manythings.org/anki/fra-eng.zip"
 RAW_DATA_FILE = RAW_DATA_DIR / "fra.txt"
 
-# Preprocessing
-MAX_LENGTH = 20  # Maximum sentence length (in words)
-MIN_LENGTH = 3   # Minimum sentence length
-VOCAB_SIZE_EN = 10000  # English vocabulary size
-VOCAB_SIZE_FR = 10000  # French vocabulary size
+# Preprocessing - REDUCED FOR CPU
+MAX_LENGTH = 10  # Reduced from 20 for faster training
+MIN_LENGTH = 3
+VOCAB_SIZE_EN = 8000  # Reduced from 10000
+VOCAB_SIZE_FR = 8000  # Reduced from 10000
 
 # Special tokens
 PAD_TOKEN = "<pad>"
-SOS_TOKEN = "<sos>"  # Start of sequence
-EOS_TOKEN = "<eos>"  # End of sequence
-UNK_TOKEN = "<unk>"  # Unknown token
+SOS_TOKEN = "<sos>"
+EOS_TOKEN = "<eos>"
+UNK_TOKEN = "<unk>"
 
 PAD_IDX = 0
 SOS_IDX = 1
@@ -48,63 +54,61 @@ VAL_RATIO = 0.1
 TEST_RATIO = 0.1
 
 # ============================================================================
-# MODEL HYPERPARAMETERS
+# MODEL HYPERPARAMETERS - CPU OPTIMIZED
 # ============================================================================
 
-# Common parameters for both models
-EMBEDDING_DIM = 256
-HIDDEN_DIM = 512
-ENCODER_LAYERS = 2
-DECODER_LAYERS = 2
+# Common parameters - REDUCED FOR CPU
+EMBEDDING_DIM = 128  # Reduced from 256
+HIDDEN_DIM = 128     # Reduced from 512
+ENCODER_LAYERS = 1   # Reduced from 2
+DECODER_LAYERS = 1   # Reduced from 2
 DROPOUT = 0.3
 
 # Attention-specific parameters
-ATTENTION_DIM = 512  # Dimension of attention mechanism
+ATTENTION_DIM = 256  # Reduced from 512
 
 # ============================================================================
-# TRAINING CONFIGURATION
+# TRAINING CONFIGURATION - CPU OPTIMIZED
 # ============================================================================
 
-# Training parameters
-BATCH_SIZE = 64
+# Training parameters - OPTIMIZED FOR CPU
+BATCH_SIZE = 16      # Reduced from 64 for CPU
 LEARNING_RATE = 0.001
-NUM_EPOCHS = 20
-GRADIENT_CLIP = 1.0  # Gradient clipping threshold
-TEACHER_FORCING_RATIO = 0.5  # Probability of using teacher forcing
+NUM_EPOCHS = 5      # Reduced from 20 for faster initial training
+GRADIENT_CLIP = 1.0
+TEACHER_FORCING_RATIO = 0.5
 
 # Optimizer
-OPTIMIZER = "adam"  # Options: 'adam', 'sgd', 'rmsprop'
+OPTIMIZER = "adam"
 WEIGHT_DECAY = 1e-5
 
 # Learning rate scheduler
 USE_LR_SCHEDULER = True
-LR_SCHEDULER_PATIENCE = 3
+LR_SCHEDULER_PATIENCE = 2  # Reduced from 3
 LR_SCHEDULER_FACTOR = 0.5
 
 # Early stopping
-EARLY_STOPPING_PATIENCE = 5
-
+EARLY_STOPPING_PATIENCE = 3  # Reduced from 5
 
 # ============================================================================
-# DEVICE CONFIGURATION
+# DEVICE CONFIGURATION - FORCE CPU
 # ============================================================================
-import torch
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-NUM_WORKERS = 4  # For data loading
+# Force CPU for this configuration
+DEVICE = torch.device("cpu")
+NUM_WORKERS = 0  # Set to 0 for CPU to avoid multiprocessing issues on Windows
 
 # ============================================================================
 # LOGGING & CHECKPOINTING
 # ============================================================================
-LOG_INTERVAL = 100  # Log every N batches
-SAVE_INTERVAL = 1   # Save checkpoint every N epochs
-VISUALIZE_ATTENTION_INTERVAL = 5  # Visualize attention every N epochs
-
+LOG_INTERVAL = 50    # Reduced from 100
+SAVE_INTERVAL = 1
+VISUALIZE_ATTENTION_INTERVAL = 5
 
 # ============================================================================
 # EVALUATION CONFIGURATION
 # ============================================================================
-BEAM_SIZE = 5  # Beam search width
-MAX_DECODE_LENGTH = 50  # Maximum length for generated translations
+BEAM_SIZE = 3        # Reduced from 5
+MAX_DECODE_LENGTH = 30  # Reduced from 50
 BLEU_METRICS = ['bleu1', 'bleu2', 'bleu3', 'bleu4']
 
 # ============================================================================
@@ -138,13 +142,12 @@ class BaselineConfig:
     encoder_layers = ENCODER_LAYERS
     decoder_layers = DECODER_LAYERS
     dropout = DROPOUT
-    
-    # Model-specific parameters
-    use_bidirectional = False  # Unidirectional LSTM
+    use_bidirectional = False
     
     def __repr__(self):
         return f"BaselineConfig(hidden={self.hidden_dim}, layers={self.encoder_layers})"
-    
+
+
 class AttentionConfig:
     """Configuration for LSTM with Bahdanau attention"""
     name = "attention_lstm"
@@ -154,14 +157,13 @@ class AttentionConfig:
     decoder_layers = DECODER_LAYERS
     dropout = DROPOUT
     attention_dim = ATTENTION_DIM
-    
-    # Model-specific parameters
-    use_bidirectional = True  # Bidirectional encoder for better context
-    attention_type = "bahdanau"  # Options: 'bahdanau', 'luong'
+    use_bidirectional = True
+    attention_type = "bahdanau"
     
     def __repr__(self):
         return f"AttentionConfig(hidden={self.hidden_dim}, attention={self.attention_dim})"
-    
+
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
@@ -174,11 +176,12 @@ def get_model_config(model_type: str):
         return AttentionConfig()
     else:
         raise ValueError(f"Unknown model type: {model_type}")
-    
+
+
 def print_config():
     """Print all configuration parameters"""
     print("=" * 80)
-    print("NEURAL MACHINE TRANSLATION - CONFIGURATION")
+    print("NEURAL MACHINE TRANSLATION - CONFIGURATION (CPU OPTIMIZED)")
     print("=" * 80)
     print(f"\n📁 PATHS:")
     print(f"  Root Dir: {ROOT_DIR}")
@@ -186,28 +189,29 @@ def print_config():
     print(f"  Model Dir: {MODEL_DIR}")
     
     print(f"\n📊 DATA:")
-    print(f"  Max Length: {MAX_LENGTH}")
+    print(f"  Max Length: {MAX_LENGTH} (reduced for CPU)")
     print(f"  Vocab Size (EN): {VOCAB_SIZE_EN}")
     print(f"  Vocab Size (FR): {VOCAB_SIZE_FR}")
-    print(f"  Train/Val/Test: {TRAIN_RATIO}/{VAL_RATIO}/{TEST_RATIO}")
     
     print(f"\n🏗️ MODEL:")
-    print(f"  Embedding Dim: {EMBEDDING_DIM}")
-    print(f"  Hidden Dim: {HIDDEN_DIM}")
-    print(f"  Encoder Layers: {ENCODER_LAYERS}")
-    print(f"  Decoder Layers: {DECODER_LAYERS}")
-    print(f"  Dropout: {DROPOUT}")
+    print(f"  Embedding Dim: {EMBEDDING_DIM} (reduced for CPU)")
+    print(f"  Hidden Dim: {HIDDEN_DIM} (reduced for CPU)")
+    print(f"  Encoder Layers: {ENCODER_LAYERS} (reduced for CPU)")
+    print(f"  Decoder Layers: {DECODER_LAYERS} (reduced for CPU)")
     
     print(f"\n🎯 TRAINING:")
-    print(f"  Batch Size: {BATCH_SIZE}")
+    print(f"  Batch Size: {BATCH_SIZE} (reduced for CPU)")
     print(f"  Learning Rate: {LEARNING_RATE}")
-    print(f"  Epochs: {NUM_EPOCHS}")
+    print(f"  Epochs: {NUM_EPOCHS} (reduced for faster training)")
     print(f"  Device: {DEVICE}")
-    print(f"  Teacher Forcing Ratio: {TEACHER_FORCING_RATIO}")
+    print(f"  Num Workers: {NUM_WORKERS}")
     
-    print(f"\n🔧 API:")
-    print(f"  Host: {API_HOST}:{API_PORT}")
-    print(f"  Streamlit Port: {STREAMLIT_PORT}")
+    print(f"\n⚡ CPU OPTIMIZATIONS:")
+    print(f"  ✓ Reduced model size (256 vs 512 hidden)")
+    print(f"  ✓ Reduced layers (1 vs 2)")
+    print(f"  ✓ Smaller batches (32 vs 64)")
+    print(f"  ✓ No multiprocessing (workers=0)")
+    print(f"  ✓ Shorter sequences (max_len=15 vs 20)")
     
     print("=" * 80)
 

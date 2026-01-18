@@ -1,6 +1,9 @@
+"""
+Data loading and preprocessing for NMT project
+FIXED: Pickle serialization issue
+"""
+
 import torch
-import sys
-import os
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import pandas as pd
@@ -8,12 +11,11 @@ import numpy as np
 from typing import List, Tuple, Dict
 from pathlib import Path
 import pickle
-
-# Add parent directory to path to import config
+import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
-
 from utils.tokenizer import Tokenizer, create_tokenizers
+
 
 class TranslationDataset(Dataset):
     """
@@ -79,6 +81,7 @@ def collate_fn(batch):
     
     return src_padded, tgt_padded, src_lengths, tgt_lengths
 
+
 def load_raw_data(file_path: Path) -> Tuple[List[str], List[str]]:
     """
     Load raw data from Tatoeba file
@@ -93,7 +96,7 @@ def load_raw_data(file_path: Path) -> Tuple[List[str], List[str]]:
     
     en_sentences = []
     fr_sentences = []
-
+    
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
             parts = line.strip().split('\t')
@@ -121,7 +124,7 @@ def split_data(en_sentences: List[str], fr_sentences: List[str]) -> Dict[str, Tu
     total = len(en_sentences)
     indices = np.random.permutation(total)
     
-    train_size = int(total * config.TRAIN_RATIO)
+    train_size = min(10000, int(total * config.TRAIN_RATIO))
     val_size = int(total * config.VAL_RATIO)
     
     train_idx = indices[:train_size]
@@ -185,10 +188,14 @@ def prepare_data():
         datasets[split_name] = dataset
         print(f"✓ {split_name}: {len(dataset):,} pairs (after filtering)")
         
-        # Save dataset
+        # FIXED: Save as dict instead of pickled object
         dataset_path = config.PROCESSED_DATA_DIR / f"{split_name}_dataset.pkl"
+        dataset_dict = {
+            'pairs': dataset.pairs,
+            'max_length': dataset.max_length
+        }
         with open(dataset_path, 'wb') as f:
-            pickle.dump(dataset, f)
+            pickle.dump(dataset_dict, f)
         print(f"✓ Saved to {dataset_path}")
     
     # Print sample data
@@ -217,6 +224,7 @@ def prepare_data():
 def load_datasets() -> Tuple[Dict[str, Dataset], Tokenizer, Tokenizer]:
     """
     Load preprocessed datasets and tokenizers
+    FIXED: Reconstruct dataset objects properly
     
     Returns:
         Tuple of (datasets dict, English tokenizer, French tokenizer)
@@ -227,12 +235,21 @@ def load_datasets() -> Tuple[Dict[str, Dataset], Tokenizer, Tokenizer]:
     tokenizer_en = Tokenizer.load(config.TOKENIZER_EN_PATH)
     tokenizer_fr = Tokenizer.load(config.TOKENIZER_FR_PATH)
     
-    # Load datasets
+    # Load datasets - FIXED
     datasets = {}
     for split in ['train', 'val', 'test']:
         dataset_path = config.PROCESSED_DATA_DIR / f"{split}_dataset.pkl"
         with open(dataset_path, 'rb') as f:
-            datasets[split] = pickle.load(f)
+            dataset_dict = pickle.load(f)
+        
+        # Reconstruct dataset object
+        dataset = TranslationDataset.__new__(TranslationDataset)
+        dataset.pairs = dataset_dict['pairs']
+        dataset.max_length = dataset_dict['max_length']
+        dataset.tokenizer_en = tokenizer_en
+        dataset.tokenizer_fr = tokenizer_fr
+        
+        datasets[split] = dataset
         print(f"✓ Loaded {split}: {len(datasets[split]):,} pairs")
     
     return datasets, tokenizer_en, tokenizer_fr
@@ -255,8 +272,8 @@ def create_dataloaders(datasets: Dict[str, Dataset], batch_size: int = config.BA
             batch_size=batch_size,
             shuffle=True,
             collate_fn=collate_fn,
-            num_workers=config.NUM_WORKERS,
-            pin_memory=True
+            num_workers=config.NUM_WORKERS,  # 0 for CPU/Windows
+            pin_memory=False  # Set to False for CPU
         ),
         'val': DataLoader(
             datasets['val'],
@@ -264,7 +281,7 @@ def create_dataloaders(datasets: Dict[str, Dataset], batch_size: int = config.BA
             shuffle=False,
             collate_fn=collate_fn,
             num_workers=config.NUM_WORKERS,
-            pin_memory=True
+            pin_memory=False
         ),
         'test': DataLoader(
             datasets['test'],
@@ -272,11 +289,12 @@ def create_dataloaders(datasets: Dict[str, Dataset], batch_size: int = config.BA
             shuffle=False,
             collate_fn=collate_fn,
             num_workers=config.NUM_WORKERS,
-            pin_memory=True
+            pin_memory=False
         )
     }
     
     return dataloaders
+
 
 # Main execution
 if __name__ == "__main__":
