@@ -304,8 +304,8 @@ if __name__ == "__main__":
     
     # Test case 1: Perfect match
     print("\nTest 1: Perfect match")
-    hyps = ["hello world"]
-    refs = [["hello world"]]
+    hyps = ["hello world this is a test"] 
+    refs = [["hello world this is a test"]]
     scores = scorer.calculate(hyps, refs)
     print(f"Hypotheses: {hyps}")
     print(f"References: {refs}")
@@ -313,8 +313,8 @@ if __name__ == "__main__":
     
     # Test case 2: Partial match
     print("\nTest 2: Partial match")
-    hyps = ["hello beautiful world"]
-    refs = [["hello world"]]
+    hyps = ["hello beautiful world this is a test"]
+    refs = [["hello world this is a test"]]
     scores = scorer.calculate(hyps, refs)
     print(f"Hypotheses: {hyps}")
     print(f"References: {refs}")
