@@ -4,6 +4,8 @@ Baseline LSTM Encoder-Decoder Model (WITHOUT Attention)
 
 import torch
 import torch.nn as nn
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 
 class Encoder(nn.Module):

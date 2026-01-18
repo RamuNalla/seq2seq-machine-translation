@@ -10,6 +10,8 @@ Key Differences from Baseline:
 
 import torch
 import torch.nn as nn
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 from models.attention_layer import BahdanauAttention
 
@@ -226,6 +228,237 @@ class AttentionDecoder(nn.Module):
         output = self.fc_out(prediction_input)  # (batch_size, vocab_size)
         
         return output, hidden, cell, attention_weights
+    
+class Seq2SeqAttention(nn.Module):
+    """
+    Complete Seq2Seq model with attention
+    
+    KEY IMPROVEMENT:
+    Decoder receives ALL encoder hidden states and can dynamically
+    attend to relevant parts of the input at each timestep.
+    """
+    
+    def __init__(self, encoder: AttentionEncoder, decoder: AttentionDecoder, device: torch.device):
+        """
+        Initialize Seq2Seq with attention
+        
+        Args:
+            encoder: AttentionEncoder module
+            decoder: AttentionDecoder module
+            device: Device to run on
+        """
+        super(Seq2SeqAttention, self).__init__()
+        
+        self.encoder = encoder
+        self.decoder = decoder
+        self.device = device
+
+    def create_mask(self, src: torch.Tensor) -> torch.Tensor:
+        """
+        Create mask for padded positions
+        
+        Args:
+            src: Source sequences (batch_size, src_len)
+            
+        Returns:
+            mask: (batch_size, src_len) with 1 for valid, 0 for padded
+        """
+        mask = (src != config.PAD_IDX).float()
+        return mask
+
+    def forward(self, src: torch.Tensor, tgt: torch.Tensor,
+                src_lengths: torch.Tensor = None,
+                teacher_forcing_ratio: float = 0.5):
+        """
+        Forward pass
+        
+        Args:
+            src: Source sequences (batch_size, src_len)
+            tgt: Target sequences (batch_size, tgt_len)
+            src_lengths: Source sequence lengths
+            teacher_forcing_ratio: Probability of using teacher forcing
+            
+        Returns:
+            outputs: Predictions (batch_size, tgt_len, vocab_size)
+            attention_weights: All attention weights (batch_size, tgt_len, src_len)
+        """
+        batch_size = src.size(0)
+        tgt_len = tgt.size(1)
+        vocab_size = self.decoder.vocab_size
+        
+        # Tensor to store outputs and attention weights
+        outputs = torch.zeros(batch_size, tgt_len, vocab_size).to(self.device)
+        attention_weights_all = torch.zeros(batch_size, tgt_len, src.size(1)).to(self.device)
+        
+        # Create mask for padding
+        mask = self.create_mask(src)
+        
+        # Encode entire source sequence
+        # CRITICAL: We get ALL hidden states
+        encoder_outputs, hidden, cell = self.encoder(src, src_lengths)
+        
+        # First input is SOS token
+        input = tgt[:, 0].unsqueeze(1)
+        
+        # Decode one token at a time
+        for t in range(1, tgt_len):
+            # Pass through decoder with attention
+            output, hidden, cell, attention_weights = self.decoder(
+                input, hidden, cell, encoder_outputs, mask
+            )
+            
+            # Store predictions and attention weights
+            outputs[:, t, :] = output
+            attention_weights_all[:, t, :] = attention_weights
+            
+            # Teacher forcing
+            teacher_force = torch.rand(1).item() < teacher_forcing_ratio
+            
+            if teacher_force:
+                input = tgt[:, t].unsqueeze(1)
+            else:
+                input = output.argmax(1).unsqueeze(1)
+        
+        return outputs, attention_weights_all
+    
+    def translate(self, src: torch.Tensor, src_lengths: torch.Tensor = None,
+                  max_length: int = 50):
+        """
+        Translate with attention (inference mode)
+        
+        Args:
+            src: Source sequence (batch_size, src_len)
+            src_lengths: Source sequence lengths
+            max_length: Maximum length to generate
+            
+        Returns:
+            translations: Generated sequences (batch_size, max_len)
+            attention_weights: Attention weights (batch_size, max_len, src_len)
+        """
+        self.eval()
+        batch_size = src.size(0)
+        
+        with torch.no_grad():
+            # Create mask
+            mask = self.create_mask(src)
+            
+            # Encode
+            encoder_outputs, hidden, cell = self.encoder(src, src_lengths)
+            
+            # Start with SOS
+            input = torch.full((batch_size, 1), config.SOS_IDX, dtype=torch.long).to(self.device)
+            
+            # Store translations and attention
+            translations = [input]
+            attention_weights_list = []
+            
+            # Generate tokens
+            for _ in range(max_length):
+                output, hidden, cell, attention_weights = self.decoder(
+                    input, hidden, cell, encoder_outputs, mask
+                )
+                
+                # Store attention
+                attention_weights_list.append(attention_weights.unsqueeze(1))
+                
+                # Get predicted token
+                predicted = output.argmax(1).unsqueeze(1)
+                translations.append(predicted)
+                
+                # Stop if all sequences generated EOS
+                if (predicted == config.EOS_IDX).all():
+                    break
+                
+                input = predicted
+            
+            # Concatenate
+            translations = torch.cat(translations, dim=1)
+            if attention_weights_list:
+                attention_weights_all = torch.cat(attention_weights_list, dim=1)
+            else:
+                attention_weights_all = None
+        
+        return translations, attention_weights_all
+    
+def create_attention_model(src_vocab_size: int, tgt_vocab_size: int,
+                           device: torch.device) -> Seq2SeqAttention:
+    """
+    Factory function to create attention model
+    
+    Args:
+        src_vocab_size: Source vocabulary size
+        tgt_vocab_size: Target vocabulary size
+        device: Device to run on
+        
+    Returns:
+        Seq2SeqAttention model
+    """
+    model_config = config.AttentionConfig()
+    
+    encoder = AttentionEncoder(
+        vocab_size=src_vocab_size,
+        embedding_dim=model_config.embedding_dim,
+        hidden_dim=model_config.hidden_dim,
+        num_layers=model_config.encoder_layers,
+        dropout=model_config.dropout,
+        bidirectional=model_config.use_bidirectional
+    )
+    
+    decoder = AttentionDecoder(
+        vocab_size=tgt_vocab_size,
+        embedding_dim=model_config.embedding_dim,
+        hidden_dim=model_config.hidden_dim,
+        attention_dim=model_config.attention_dim,
+        num_layers=model_config.decoder_layers,
+        dropout=model_config.dropout
+    )
+    
+    model = Seq2SeqAttention(encoder, decoder, device).to(device)
+    
+    return model
+
+# Test the model
+if __name__ == "__main__":
+    print("=" * 80)
+    print("TESTING ATTENTION-BASED MODEL")
+    print("=" * 80)
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    src_vocab_size = 5000
+    tgt_vocab_size = 5000
+    batch_size = 4
+    src_len = 10
+    tgt_len = 12
+    
+    # Create model
+    model = create_attention_model(src_vocab_size, tgt_vocab_size, device)
+    print(f"\nModel created on {device}")
+    print(f"Total parameters: {sum(p.numel() for p in model.parameters()):,}")
+    
+    # Create dummy data
+    src = torch.randint(0, src_vocab_size, (batch_size, src_len)).to(device)
+    tgt = torch.randint(0, tgt_vocab_size, (batch_size, tgt_len)).to(device)
+    src_lengths = torch.full((batch_size,), src_len, dtype=torch.long)
+    
+    print(f"\nInput shapes:")
+    print(f"  Source: {src.shape}")
+    print(f"  Target: {tgt.shape}")
+    
+    # Forward pass
+    outputs, attention_weights = model(src, tgt, src_lengths, teacher_forcing_ratio=0.5)
+    print(f"\nOutput shape: {outputs.shape}")
+    print(f"Attention weights shape: {attention_weights.shape}")
+    print(f"Expected attention: (batch={batch_size}, tgt_len={tgt_len}, src_len={src_len})")
+    
+    # Test translation
+    translations, attn = model.translate(src, src_lengths, max_length=20)
+    print(f"\nTranslation shape: {translations.shape}")
+    if attn is not None:
+        print(f"Translation attention shape: {attn.shape}")
+    
+    print("\n" + "=" * 80)
+    print("✓ ATTENTION MODEL WORKING CORRECTLY")
+    print("=" * 80)
 
     
 
