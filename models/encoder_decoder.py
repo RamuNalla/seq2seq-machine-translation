@@ -206,7 +206,7 @@ class Seq2Seq(nn.Module):
     def translate(self, src: torch.Tensor, src_lengths: torch.Tensor = None,
                   max_length: int = 50):
         """
-        Translate a source sentence (inference mode)
+        Translate a source sentence (during inference mode)
         
         Args:
             src: Source sequence (batch_size, src_len)
@@ -216,10 +216,10 @@ class Seq2Seq(nn.Module):
         Returns:
             translations: Generated sequences (batch_size, max_len)
         """
-        self.eval()
+        self.eval()                     # to turn off dropout/batchnorm
         batch_size = src.size(0)
         
-        with torch.no_grad():
+        with torch.no_grad():           # to save massive meory and speed
             # Encode source
             hidden, cell = self.encoder(src, src_lengths)
             
@@ -230,7 +230,7 @@ class Seq2Seq(nn.Module):
             translations = [input]
             
             # Generate tokens one by one
-            for _ in range(max_length):
+            for _ in range(max_length):         # we don't know how long the translation going to be
                 output, hidden, cell = self.decoder(input, hidden, cell)
                 
                 # Get predicted token
