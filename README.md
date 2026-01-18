@@ -12,7 +12,7 @@ This project implements and compares two Neural Machine Translation (NMT) archit
 - Visualize attention weights to understand model behavior
 - Compare quantitative (BLEU) and qualitative results
 
-## 📊 Dataset
+## Dataset
 
 **Tatoeba English-French Parallel Corpus**
 - ~200,000 sentence pairs
@@ -20,7 +20,7 @@ This project implements and compares two Neural Machine Translation (NMT) archit
 
 ---
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 seq2seq-nmt-translation/
@@ -121,7 +121,7 @@ Access the app at: http://localhost:8501
 
 ---
 
-## 🎓 Understanding the Models
+## Understanding the Models
 
 ### Baseline LSTM Architecture
 
@@ -190,7 +190,6 @@ Input Sentence → Encoder LSTM → [All Hidden States]
 
 
 
-
 ## 📄 License
 
 MIT License - feel free to use this for learning and research!
@@ -200,7 +199,6 @@ MIT License - feel free to use this for learning and research!
 ## 🌟 Acknowledgments
 
 - Dataset: Tatoeba Project
-- Framework: PyTorch
 - Inspiration: Stanford CS224N
 
 ---
